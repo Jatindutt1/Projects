@@ -16,4 +16,7 @@ router.route("/deleteProducts/:id").delete(deleteproduct)
 //view single product route
 router.route("/viewsingleProducts/:id").get(viewsingleproduct)
 
+
+
+
 module.exports=router
