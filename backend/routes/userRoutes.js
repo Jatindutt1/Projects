@@ -1,5 +1,5 @@
 const express=require("express");
-const { createUser,allUser,userLogin,singleUser,deleteUser ,updateUserApi} = require("../controllers/userController");
+const { createUser,allUser,userLogin,singleUser,deleteUser ,updateUserApi,logoutuser,forgotPassword} = require("../controllers/userController");
 
 const router=express.Router();
 
@@ -17,6 +17,10 @@ router.route("/singleuser/:id").get(singleUser)
 router.route("/delete/:id").delete(deleteUser)
 //update user route
 router.route("/update/:id").put(updateUserApi)
+//logout 
+router.route("/logout").get(logoutuser)
+//forgot
+router.route("/password/forgot").post(forgotPassword)
 
 
 

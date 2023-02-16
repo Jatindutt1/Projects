@@ -1,28 +1,28 @@
-const users = require("../modals/usermodal");
+const User = require("../modals/usermodal");
 const catchAsyncErrors = require("../middleware/catchAsyncError"); //for error
 const ErrorHandler = require("../utils/errorhandler");
-const { generateToken } = require("../config/jsonToken");
+const sendToken = require("../utils/cookiejwttoken")
+const sendEmail =require("../utils/sendEmail")
 
 //register api
 exports.createUser = catchAsyncErrors(async (req, res, next) => {
   //user exist or not
-  const email = req.body.email;
-  const existuser = await users.findOne({ email: email });
-  if (existuser) {
-    return next(new ErrorHandler("user already exist", 404));
-  } else {
-    const result = await users.create(req.body);
+  const { firstName, lastName, email, password, phoneNumber,role } = req.body;
 
-    res.status(201).json({
-      success: true,
-      result,
-    });
-  }
+  const user = await User.create({
+    firstName, lastName, email, password, phoneNumber,role, avatar: {
+      public_id: "sample",
+      url: "profilepic"
+    },
+  })
+  sendToken(user, 201, res);
+
+
 });
 
 //all user api
 exports.allUser = catchAsyncErrors(async (req, res, next) => {
-  const alluser = await users.find();
+  const alluser = await User.find();
 
   res.status(201).json({
     success: true,
@@ -34,19 +34,18 @@ exports.allUser = catchAsyncErrors(async (req, res, next) => {
 exports.userLogin = catchAsyncErrors(async (req, res, next) => {
   const { email, password } = req.body;
 
+
+  
   // check if user exist or not
-  const findUser = await users.findOne({ email });
-  if (findUser && (await findUser.ispasswordMatched(password))) {
-    res.status(200).json({
-      success: true,
-      _id: findUser?._id,
-      email: findUser?.email,
-      password: findUser?.password,
-      token: generateToken(findUser?.id),
-    });
-  } else {
-    return next(new ErrorHandler("Invalid credintials", 404));
+  const user = await User.findOne({ email, password });
+  if (!user) {
+     return next(new ErrorHandler("Invalid credintials", 401));
   }
+  const ispasswordMatched = user.comparePassword(password);
+  if (!ispasswordMatched) {
+     return next(new ErrorHandler("Invalid credintials", 401));
+  }
+  sendToken(user, 200, res);
 });
 
 //fetch single user by id
@@ -62,6 +61,199 @@ exports.singleUser = catchAsyncErrors(async (req, res, next) => {
   });
 });
 
+//logout api
+
+exports.logoutuser =catchAsyncErrors(async(req,res,next)=>{
+
+  res.cookie("token",null,{
+    expires: new Date(Date.now()),
+    httpOnly:true
+  });
+  
+  res.status(200).json({
+    success:true,
+    message:"logged out successfully"
+  })
+
+})
+
+//Forgot password api
+exports.forgotPassword =catchAsyncErrors(async(req,res,next)=>{
+     //find user with email
+     const user = await User.findOne({email:req.body.email})
+      
+     if(!user){
+      return next(new ErrorHandler("User not found",404));
+     }
+
+     //get reset token from usermodal 
+     const resetToken = user.getResetPasswordToken();
+     //now save user with reset token 
+     await user.save({validateBeforeSave:false});
+
+     //create reset password url
+
+     const resetPasswordUrl = `${req.protocol}://${req.get("host")}/api/v1/password/reset/${resetToken}`;
+
+     //create message to send
+     const message = `your reset password link is:- /n/n${resetPasswordUrl}`; 
+     
+     try{
+      
+      await sendEmail({
+        email:user.email,
+        subject:"password recvery",
+        message:message
+
+      })
+      res.status(200).json({
+        success:true,
+        message:`Email send to${user.email} succesfully` 
+      })
+        
+
+     }
+     catch(error){
+      user.resetPasswordToken=undefined
+        user.resetPasswordExpire=undefined
+     await user.save({validateBeforeSave:false});
+     return next(new ErrorHandler(error.message,500))
+
+
+     }
+
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //delete user Api
 exports.deleteUser = catchAsyncErrors(async (req, res) => {
   const deleteuser = await users.findById(req.params.id);
@@ -75,7 +267,7 @@ exports.deleteUser = catchAsyncErrors(async (req, res) => {
   });
 });
 
-//update user api
+//update user api 
 exports.updateUserApi = catchAsyncErrors(
   async (req, res, next) => {
     //take let because we update (updateProduct) .
@@ -97,3 +289,5 @@ exports.updateUserApi = catchAsyncErrors(
     });
   }
 );
+
+
