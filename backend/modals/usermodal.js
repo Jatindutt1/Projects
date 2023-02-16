@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto")
 
+const validator = require("validator");
 
 const userSchema = new mongoose.Schema({
   firstName: {
@@ -18,6 +19,16 @@ const userSchema = new mongoose.Schema({
     required: [true, "email is required."],
     index: {
       unique: true,
+    },
+  },
+  avatar: {
+    public_id: {
+      type: String,
+      require: true,
+    },
+    url: {
+      type: String,
+      require: true,
     },
   },
   phoneNumber: {
